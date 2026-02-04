@@ -1,0 +1,18 @@
+{
+  "name": "Founder Mobile",
+  "short_name": "Founder",
+  "description": "Premium Marketplace",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#122017",
+  "theme_color": "#38e07b",
+  "icons": [
+    {
+      "src": "/icon.png",
+      "sizes": "1024x1024",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ],
+  "orientation": "portrait"
+}
