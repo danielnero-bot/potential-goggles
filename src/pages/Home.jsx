@@ -2,10 +2,13 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../supabase";
 import { useAuth } from "../context/AuthContext";
+import { motion, AnimatePresence } from "framer-motion";
 
 const Home = () => {
   const [restaurants, setRestaurants] = useState([]);
+  const [filteredRestaurants, setFilteredRestaurants] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [selectedCategory, setSelectedCategory] = useState("All");
   const { user } = useAuth();
   const categories = ["All", "Pizza", "Sushi", "Burgers", "Asian", "Dessert", "Veggies"];
   const navigate = useNavigate();
@@ -31,7 +34,7 @@ const Home = () => {
           .from("restaurants")
           .select("*")
           .order("rating", { ascending: false })
-          .limit(5);
+          .limit(20);
 
         if (error) throw error;
         
@@ -42,6 +45,7 @@ const Home = () => {
           }))
         );
         setRestaurants(withLogos);
+        setFilteredRestaurants(withLogos.slice(0, 5));
       } catch (err) {
         console.error(err);
       } finally {
@@ -50,6 +54,17 @@ const Home = () => {
     };
     fetchTopRestaurants();
   }, []);
+
+  useEffect(() => {
+    if (selectedCategory === "All") {
+      setFilteredRestaurants(restaurants.slice(0, 5));
+    } else {
+      const filtered = restaurants.filter(r => 
+        r.cuisine?.toLowerCase().includes(selectedCategory.toLowerCase())
+      );
+      setFilteredRestaurants(filtered);
+    }
+  }, [selectedCategory, restaurants]);
   
   const getInitials = (name) => {
     if (!name) return "UN";
@@ -72,7 +87,12 @@ const Home = () => {
                  <span className="text-sm opacity-60 font-bold mb-1">Welcome back,</span>
                  <span className="text-3xl tracking-tighter uppercase">{getFirstName(user.user_metadata?.full_name)}!</span>
                </>
-            ) : "Founder Food"}
+            ) : (
+              <>
+                <span className="text-sm opacity-60 font-bold mb-1">Satisfy your</span>
+                <span className="text-3xl tracking-tighter uppercase">Cravings!</span>
+              </>
+            )}
           </h1>
         </div>
         <div 
@@ -103,8 +123,12 @@ const Home = () => {
 
       <section className="mb-10">
         <div className="flex gap-4 overflow-x-auto hide-scrollbar -mx-6 px-6">
-          {categories.map((cat, i) => (
-            <button key={cat} className={`whitespace-nowrap px-6 py-3 rounded-2xl font-black text-sm transition-all border ${i === 0 ? "bg-primary text-white border-primary shadow-lg shadow-primary/20" : "bg-white dark:bg-card-dark border-border-light dark:border-border-dark"}`}>
+          {categories.map((cat) => (
+            <button 
+              key={cat} 
+              onClick={() => setSelectedCategory(cat)}
+              className={`whitespace-nowrap px-6 py-3 rounded-2xl font-black text-sm transition-all border ${selectedCategory === cat ? "bg-primary text-white border-primary shadow-lg shadow-primary/20" : "bg-white dark:bg-card-dark border-border-light dark:border-border-dark"}`}
+            >
               {cat}
             </button>
           ))}
@@ -113,33 +137,53 @@ const Home = () => {
 
       <section>
         <div className="flex justify-between items-end mb-6">
-          <h2 className="text-3xl font-black uppercase tracking-tighter">Chef's Choice</h2>
-          <span className="text-primary text-xs font-black mb-1 cursor-pointer" onClick={() => navigate('/explore')}>VIEW ALL</span>
+          <h2 className="text-3xl font-black uppercase tracking-tighter">
+            {selectedCategory === "All" ? "Chef's Choice" : `${selectedCategory} Spots`}
+          </h2>
+          <span 
+            className="text-primary text-xs font-black mb-1 cursor-pointer" 
+            onClick={() => navigate(`/explore?category=${selectedCategory}`)}
+          >
+            VIEW ALL
+          </span>
         </div>
-        <div className="flex gap-6 overflow-x-auto pb-8 -mx-6 px-6 hide-scrollbar">
+        <div className="flex gap-6 overflow-x-auto pb-8 -mx-6 px-6 hide-scrollbar min-h-[300px]">
           {loading ? (
              [1,2].map(i => <div key={i} className="min-w-[300px] h-72 bg-gray-100 dark:bg-white/5 animate-pulse rounded-[40px]" />)
           ) : (
-            restaurants.map((res) => (
-              <div 
-                key={res.id} 
-                onClick={() => navigate(`/restaurant/${res.id}`)}
-                className="min-w-[300px] bg-white dark:bg-card-dark rounded-[40px] overflow-hidden border border-border-light dark:border-border-dark shadow-sm group active:scale-[0.98] transition-all"
-              >
-                <div className="h-52 bg-gray-200 dark:bg-gray-800 relative">
-                  {res.logo_url && <img src={res.logo_url} className="w-full h-full object-cover" alt={res.name} />}
-                  <div className="absolute top-4 right-4 bg-white/95 dark:bg-black/80 backdrop-blur-md px-3 py-1 rounded-xl text-xs font-black">
-                    ★ {res.rating || 4.5}
-                  </div>
+            <AnimatePresence mode="popLayout">
+              {filteredRestaurants.length > 0 ? (
+                filteredRestaurants.map((res) => (
+                  <motion.div 
+                    key={res.id} 
+                    layout
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.9 }}
+                    onClick={() => navigate(`/restaurant/${res.id}`)}
+                    className="min-w-[300px] bg-white dark:bg-card-dark rounded-[40px] overflow-hidden border border-border-light dark:border-border-dark shadow-sm group active:scale-[0.98] transition-all"
+                  >
+                    <div className="h-52 bg-gray-200 dark:bg-gray-800 relative">
+                      {res.logo_url && <img src={res.logo_url} className="w-full h-full object-cover" alt={res.name} />}
+                      <div className="absolute top-4 right-4 bg-white/95 dark:bg-black/80 backdrop-blur-md px-3 py-1 rounded-xl text-xs font-black">
+                        ★ {res.rating || 4.5}
+                      </div>
+                    </div>
+                    <div className="p-6">
+                      <h3 className="font-black text-2xl mb-1 flex items-center justify-between">
+                        {res.name} <span className="text-primary text-sm">$$</span>
+                      </h3>
+                      <p className="text-text-secondary-light dark:text-text-secondary-dark text-xs font-bold">{res.cuisine || "Gourmet"} • 15-25 min</p>
+                    </div>
+                  </motion.div>
+                ))
+              ) : (
+                <div className="min-w-full flex flex-col items-center justify-center py-12 text-center opacity-50">
+                  <div className="text-4xl mb-2">🍽️</div>
+                  <p className="font-bold">No {selectedCategory} spots found yet.</p>
                 </div>
-                <div className="p-6">
-                  <h3 className="font-black text-2xl mb-1 flex items-center justify-between">
-                    {res.name} <span className="text-primary text-sm">$$</span>
-                  </h3>
-                  <p className="text-text-secondary-light dark:text-text-secondary-dark text-xs font-bold">{res.cuisine || "Gourmet"} • 15-25 min</p>
-                </div>
-              </div>
-            ))
+              )}
+            </AnimatePresence>
           )}
         </div>
       </section>

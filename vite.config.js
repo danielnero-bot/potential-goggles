@@ -12,9 +12,9 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'mask-icon.svg'],
       manifest: {
-        name: 'Founder Mobile',
-        short_name: 'Founder',
-        description: 'Premium Marketplace',
+        name: 'Quick Plate',
+        short_name: 'Quick Plate',
+        description: 'Premium Food Delivery',
         theme_color: '#122017',
         background_color: '#122017',
         display: 'standalone',

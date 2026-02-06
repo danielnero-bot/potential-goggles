@@ -70,7 +70,7 @@ const Profile = () => {
       </div>
 
       <div className="mt-12 text-center text-[10px] font-black uppercase tracking-[0.2em] opacity-30">
-        Founder Mobile App v1.0
+        Quick Plate Mobile App v1.0
       </div>
     </div>
   );
