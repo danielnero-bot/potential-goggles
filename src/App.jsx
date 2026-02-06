@@ -5,19 +5,65 @@ import { CartProvider, useCart } from "./context/CartContext";
 import MobileNav from "./components/MobileNav";
 import Explore from "./pages/Explore";
 import RestaurantDetail from "./pages/RestaurantDetail";
+import { supabase } from "./supabase";
+import { useNavigate } from "react-router-dom";
 import Checkout from "./pages/Checkout";
 import CartSheet from "./components/CartSheet";
 import { FiShoppingBag } from "react-icons/fi";
 
 // Simple Home Page with Category Pills
 const Home = () => {
+  const [restaurants, setRestaurants] = React.useState([]);
+  const [loading, setLoading] = React.useState(true);
   const categories = ["All", "Pizza", "Sushi", "Burgers", "Asian", "Dessert", "Veggies"];
+  const navigate = useNavigate();
+
+  React.useEffect(() => {
+    const loadRestaurantLogo = async (restaurantId) => {
+      try {
+        const { data, error } = await supabase.storage
+          .from("restaurant-logos")
+          .list(restaurantId, { limit: 1 });
+        if (error || !data || data.length === 0) return null;
+        const { data: urlData } = supabase.storage
+          .from("restaurant-logos")
+          .getPublicUrl(`${restaurantId}/${data[0].name}`);
+        return urlData?.publicUrl;
+      } catch { return null; }
+    };
+
+    const fetchTopRestaurants = async () => {
+      try {
+        setLoading(true);
+        const { data, error } = await supabase
+          .from("restaurants")
+          .select("*")
+          .order("rating", { ascending: false })
+          .limit(5);
+
+        if (error) throw error;
+        
+        const withLogos = await Promise.all(
+          (data || []).map(async (res) => ({
+            ...res,
+            logo_url: (await loadRestaurantLogo(res.id)) || res.logo_url
+          }))
+        );
+        setRestaurants(withLogos);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchTopRestaurants();
+  }, []);
   
   return (
     <div className="p-6">
       <header className="flex justify-between items-center mb-8 pt-4">
         <div>
-          <h2 className="text-text-secondary-light dark:text-text-secondary-dark font-black text-xs uppercase tracking-widest mb-1 opacity-50">Founder Delivery</h2>
+          <h2 className="text-text-secondary-light dark:text-text-secondary-dark font-black text-xs uppercase tracking-widest mb-1 opacity-50">Quick Plate</h2>
           <h1 className="text-2xl font-black flex items-center gap-2">
             San Francisco <span className="text-primary text-[10px] bg-primary/10 px-2 py-1 rounded-full">CHANGE</span>
           </h1>
@@ -56,24 +102,33 @@ const Home = () => {
       <section>
         <div className="flex justify-between items-end mb-6">
           <h2 className="text-3xl font-black uppercase tracking-tighter">Chef's Choice</h2>
-          <span className="text-primary text-xs font-black mb-1">VIEW ALL</span>
+          <span className="text-primary text-xs font-black mb-1 cursor-pointer" onClick={() => navigate('/explore')}>VIEW ALL</span>
         </div>
         <div className="flex gap-6 overflow-x-auto pb-8 -mx-6 px-6 hide-scrollbar">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="min-w-[300px] bg-white dark:bg-card-dark rounded-[40px] overflow-hidden border border-border-light dark:border-border-dark shadow-sm group">
-              <div className="h-52 bg-gray-200 dark:bg-gray-800 relative">
-                <div className="absolute top-4 right-4 bg-white/95 dark:bg-black/80 backdrop-blur-md px-3 py-1 rounded-xl text-xs font-black">
-                  ★ 4.9
+          {loading ? (
+             [1,2].map(i => <div key={i} className="min-w-[300px] h-72 bg-gray-100 dark:bg-white/5 animate-pulse rounded-[40px]" />)
+          ) : (
+            restaurants.map((res) => (
+              <div 
+                key={res.id} 
+                onClick={() => navigate(`/restaurant/${res.id}`)}
+                className="min-w-[300px] bg-white dark:bg-card-dark rounded-[40px] overflow-hidden border border-border-light dark:border-border-dark shadow-sm group active:scale-[0.98] transition-all"
+              >
+                <div className="h-52 bg-gray-200 dark:bg-gray-800 relative">
+                  {res.logo_url && <img src={res.logo_url} className="w-full h-full object-cover" alt={res.name} />}
+                  <div className="absolute top-4 right-4 bg-white/95 dark:bg-black/80 backdrop-blur-md px-3 py-1 rounded-xl text-xs font-black">
+                    ★ {res.rating || 4.5}
+                  </div>
+                </div>
+                <div className="p-6">
+                  <h3 className="font-black text-2xl mb-1 flex items-center justify-between">
+                    {res.name} <span className="text-primary text-sm">$$</span>
+                  </h3>
+                  <p className="text-text-secondary-light dark:text-text-secondary-dark text-xs font-bold">{res.cuisine || "Gourmet"} • 15-25 min</p>
                 </div>
               </div>
-              <div className="p-6">
-                <h3 className="font-black text-2xl mb-1 flex items-center justify-between">
-                  Truffle House <span className="text-primary text-sm">$</span>
-                </h3>
-                <p className="text-text-secondary-light dark:text-text-secondary-dark text-xs font-bold">Gourmet Burger • Artisan • 15-25 min</p>
-              </div>
-            </div>
-          ))}
+            ))
+          )}
         </div>
       </section>
     </div>

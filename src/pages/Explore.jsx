@@ -11,30 +11,69 @@ const Explore = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
+    const loadRestaurantLogo = async (restaurantId) => {
+      try {
+        const { data, error } = await supabase.storage
+          .from("restaurant-logos")
+          .list(restaurantId, {
+            limit: 1,
+          });
+
+        if (error) return null;
+
+        if (data && data.length > 0) {
+          const { data: urlData } = supabase.storage
+            .from("restaurant-logos")
+            .getPublicUrl(`${restaurantId}/${data[0].name}`);
+
+          return urlData?.publicUrl;
+        }
+        return null;
+      } catch {
+        return null;
+      }
+    };
+
+    const fetchRestaurants = async () => {
+      try {
+        setLoading(true);
+        const { data, error } = await supabase
+          .from("restaurants")
+          .select("*")
+          .order("rating", { ascending: false });
+
+        if (error) throw error;
+        
+        const restaurantsWithLogos = await Promise.all(
+          (data || []).map(async (restaurant) => {
+            const logoUrl = await loadRestaurantLogo(restaurant.id);
+            return {
+              ...restaurant,
+              logo_url: logoUrl || restaurant.logo_url,
+            };
+          })
+        );
+
+        setRestaurants(restaurantsWithLogos);
+      } catch (error) {
+        console.error("Error fetching restaurants:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
     fetchRestaurants();
   }, []);
 
-  const fetchRestaurants = async () => {
-    try {
-      setLoading(true);
-      const { data, error } = await supabase
-        .from("restaurants")
-        .select("*")
-        .order("rating", { ascending: false });
-
-      if (error) throw error;
-      setRestaurants(data || []);
-    } catch (error) {
-      console.error("Error fetching restaurants:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const filteredRestaurants = restaurants.filter(r => 
-    r.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (r.cuisine && r.cuisine.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
+  const filteredRestaurants = restaurants.filter(r => {
+    const query = searchTerm.toLowerCase();
+    return (
+      r.name.toLowerCase().includes(query) ||
+      (r.cuisine && r.cuisine.toLowerCase().includes(query)) ||
+      (r.address && r.address.toLowerCase().includes(query)) ||
+      (r.location && r.location.toLowerCase().includes(query))
+    );
+  });
 
   return (
     <div className="p-6">

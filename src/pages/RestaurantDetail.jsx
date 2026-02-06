@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "../supabase";
 import { useCart } from "../context/CartContext";
 import { FiChevronLeft, FiPlus, FiStar, FiClock, FiInfo } from "react-icons/fi";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 
 const RestaurantDetail = () => {
   const { id } = useParams();
@@ -14,26 +14,55 @@ const RestaurantDetail = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    const loadRestaurantLogo = async (restaurantId) => {
+      try {
+        const { data, error } = await supabase.storage
+          .from("restaurant-logos")
+          .list(restaurantId, {
+            limit: 1,
+          });
+
+        if (error) return null;
+
+        if (data && data.length > 0) {
+          const { data: urlData } = supabase.storage
+            .from("restaurant-logos")
+            .getPublicUrl(`${restaurantId}/${data[0].name}`);
+
+          return urlData?.publicUrl;
+        }
+        return null;
+      } catch {
+        return null;
+      }
+    };
+
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        const [resData, menuData] = await Promise.all([
+          supabase.from("restaurants").select("*").eq("id", id).single(),
+          supabase.from("menu_items").select("*").eq("restaurant_id", id)
+        ]);
+
+        if (resData.error) throw resData.error;
+        
+        const logoUrl = await loadRestaurantLogo(resData.data.id);
+        setRestaurant({
+          ...resData.data,
+          logo_url: logoUrl || resData.data.logo_url
+        });
+        
+        setMenuItems(menuData.data || []);
+      } catch (error) {
+        console.error("Error fetching restaurant details:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
     fetchData();
   }, [id]);
-
-  const fetchData = async () => {
-    try {
-      setLoading(true);
-      const [resData, menuData] = await Promise.all([
-        supabase.from("restaurants").select("*").eq("id", id).single(),
-        supabase.from("menu_items").select("*").eq("restaurant_id", id)
-      ]);
-
-      if (resData.error) throw resData.error;
-      setRestaurant(resData.data);
-      setMenuItems(menuData.data || []);
-    } catch (error) {
-      console.error("Error fetching restaurant details:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   if (loading) return (
     <div className="flex h-screen items-center justify-center bg-background-light dark:bg-background-dark">
