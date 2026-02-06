@@ -1,21 +1,16 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../supabase";
+import { useAuth } from "../context/AuthContext";
 
 const Home = () => {
   const [restaurants, setRestaurants] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [user, setUser] = useState(null);
+  const { user } = useAuth();
   const categories = ["All", "Pizza", "Sushi", "Burgers", "Asian", "Dessert", "Veggies"];
   const navigate = useNavigate();
 
   useEffect(() => {
-    const checkUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      setUser(user);
-    };
-    checkUser();
-
     const loadRestaurantLogo = async (restaurantId) => {
       try {
         const { data, error } = await supabase.storage

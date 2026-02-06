@@ -29,14 +29,6 @@ const Signup = () => {
       });
 
       if (signupError) throw signupError;
-      
-      // Auto-create user_details entry
-      if (data?.user) {
-        await supabase.from("user_details").insert([
-          { user_id: data.user.id, full_name: fullName }
-        ]);
-      }
-
       navigate("/");
     } catch (err) {
       setError(err.message);

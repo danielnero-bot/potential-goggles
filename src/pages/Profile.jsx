@@ -2,26 +2,17 @@ import React, { useState, useEffect } from "react";
 import { supabase } from "../supabase";
 import { useNavigate } from "react-router-dom";
 import { FiUser, FiLogOut, FiPackage, FiHeart, FiSettings, FiChevronRight, FiCreditCard } from "react-icons/fi";
-import { motion } from "framer-motion";
+import { useAuth } from "../context/AuthContext";
 
 const Profile = () => {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
-    checkUser();
-  }, []);
-
-  const checkUser = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
+    if (!authLoading && !user) {
       navigate("/login");
-    } else {
-      setUser(user);
     }
-    setLoading(false);
-  };
+  }, [user, authLoading, navigate]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -43,7 +34,7 @@ const Profile = () => {
     </button>
   );
 
-  if (loading) return null;
+  if (authLoading || !user) return null;
 
   return (
     <div className="min-h-screen bg-background-light dark:bg-background-dark p-6 pb-24">

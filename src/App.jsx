@@ -2,6 +2,7 @@ import React, { useEffect } from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { CartProvider, useCart } from "./context/CartContext";
+import { AuthProvider } from "./context/AuthContext";
 import MobileNav from "./components/MobileNav";
 import Home from "./pages/Home";
 import Explore from "./pages/Explore";
@@ -14,19 +15,11 @@ import Favorites from "./pages/Favorites";
 import Orders from "./pages/Orders";
 import CartSheet from "./components/CartSheet";
 import { FiShoppingBag } from "react-icons/fi";
-import { supabase } from "./supabase";
 
 const AppContent = () => {
   const { getCartItemsCount, setIsCartOpen, getCartTotal } = useCart();
   const itemCount = getCartItemsCount();
   const total = getCartTotal();
-
-  useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
-      // Auth state synced across components via Supabase client
-    });
-    return () => subscription.unsubscribe();
-  }, []);
 
   return (
     <div className="min-h-screen bg-background-light dark:bg-background-dark pb-24 transition-colors duration-500 overflow-x-hidden">
@@ -75,11 +68,13 @@ const AppContent = () => {
 
 const App = () => {
   return (
-    <CartProvider>
-      <Router>
-        <AppContent />
-      </Router>
-    </CartProvider>
+    <AuthProvider>
+      <CartProvider>
+        <Router>
+          <AppContent />
+        </Router>
+      </CartProvider>
+    </AuthProvider>
   );
 };
 
